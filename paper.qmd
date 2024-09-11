@@ -1,0 +1,61 @@
+---
+title: "Analyzing Relationships between Tunes in a Set in Traditional Irish Folk Instrumental Music"
+author:
+  - name: Nico Benz
+    email: nico.benz@studserv.uni-leipzig.de
+    affiliations:
+      - name: Leipzig University
+        department: Institute for Computer Science
+        group: Computational Humanities
+        url: https://www.uni-leipzig.de
+date: 2024-09-15
+format:
+  html:
+        embed-resources: true
+        code-fold: true
+        toc: true
+abstract: |
+  This paper investigates how tunes in traditional Irish folk instrumental music are combined into collections called sets and which properties of tunes within a set are most important in the set's composition. Using statistical and machine learning appraoches like Structural Equation Models (SEM), Permutation Tests and Random Forest classifiers, it will be shown how relevant different musical properties are for tunes to make up a set.
+bibliography: literature.bib
+csl: apa.csl
+jupyter: python3
+---
+
+# Introduction
+Irish folk music is part of Celtic folk music, that also contains Breton, Scottish and Welsh music [@porter1998]. In traditional Irish folk music, dance tunes are played live in rapid succession without noticeable breaks in between, creating combinations of tunes called *sets* [@fairbairn1994, 567]. These sets are usually played live in pubs or other places in social gatherings called *sessions* [@kaul2007;@kneafsey2002;@fairbairn1994, 567]. These sessions are very important to Irish culture and identity and have an underlying hierarchy and etiquette to them [@kearney2016, 179, 171-172].
+
+Because the tunes of a set are played live in such a rapid fashion that there are no noticeable breaks between them, it can be assumed that tunes need to be compatible in at least some of their musical properties in order to form a valid set. This assumption leads to the formulation of the following hypotheses $H_0$ and $H_1$:
+
+Null Hypothesis ($H_0$): The musical properties of tunes do not have a significant influence on their selection into a set.
+
+Alternative Hypothesis ($H_1$): The combination of tunes into a set is significantly influenced by the musical properties of the tunes.
+
+This paper tries to find evidence in support of $H_1$ to bring some insights on how set composition is dictated.
+
+# Related work
+## Cultural aspects of Irish folk music
+Like most folk musics, Irish folk does not play a large role in musicology. However, there is some research on the cultural background of Irish folk music. A central aspect of Irish folk music are the aforementioned sessions, in which Irish folk dance tunes are played. These sessions became popular during the 1950s and 60s, while tunes where mostly played at home or at public fairs before that time [@kearney2016, 177]. Sessions are mostly played by a group of paid or unpaid musicians where a structure of hierarchy and etiquette is formed [@kearney2016, 172;]. In session etiquette, musicians take turns in selecting sets and the tunes contained in them [@tolmie2016, 343]. Since tunes in Irish folk are mostly not noted and melodies are played from memory, sessions mostly have tunes with simplified melodic motifs where variations are either created through transpositions or individual ornamentation rather than musically intricate variations [@fairbairn1994, 594; @doherty2022, 22].
+
+## Structure of Irish folk music
+The research situation on the musical properties of Irish folk is not as good established as the research on the cultural aspects. However, @gainza2006 gives a good overview of some musical properties of Irish folk. Tunes in Irish folk are based on the church modes Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian and Locrian, where Ionian and Aeolian are identical to the classical western modes of Major and Minor, with some root notes being more common for each mode [@gainza2006, 13]. Most of Irish folk music is dance music with destinction between different kinds of dance tunes like jigs, hornpipes and reels, with slower genres like airs being an exception [@gainza2006, 14]. These tune types differ in several properties like meter, tempo or accentuated beats where reels and hornpipes have mostly 4/4 time signatures and jigs or double jigs mostly 6/8 time signature [@doherty2022, 23; @gainza2006, 14]. Phrase structure in Irish folk tunes is very simplistic, offering 8-bar phrases with division into two 4-bar in most cases, which forms a very predictable and easily repeated structure that fasilitates of individual create input [@doherty2022, 23-24; @fairbairn1994, 597]. In most cases, two of these 8-bar parts are combined into a tune of 16 bars in length, that are repeated in the form of AABB [@hillhouse2005, 24]. This focus on simplistic structure and easily repeated phrases extends further to the concept of sets. Since they are not rehearsed by the group of musicians, they need a very loose structure to stay flexible and interactive [@fairbairn1994, 567]. During live play, tunes loose some of their melodic intricacies in favor of easier group play and a natural and spontaneous evolving of the tune in musical performance that values social experience higher than display of musical proficiency [@fairbairn1994]. To further faciliate the open structure of sets, tunes often end with conventional cadences and end-rhymes for easy closure and repetition of phrases, leading to motivic repetition either within individual parts as internal repetition or across different sections as external repetition [@doherty2022, 24, 29-31].
+
+While musicians adhere rather strictly to mode and time signature, they have freedom in individual phrasing and slight changes in melody called ornamentation [@gainza2006, 15-16]. These ornamentations are characteristic for regional and personal style and constist of rolls, double roll, triplets, grace notes, crans and trills [@mccullough1977, 86]. These kind of musical phrasings include nicely into group oriented play during sessions, which is mostly faster and offers less room for variation [@fairbairn1994, 594-595].
+
+## Computational approaches to Irish folk music
+
+# Methodology
+
+# Data overview
+
+# Experimental design
+## Data cleaning
+## Dataset sampling
+## Statistical approaches
+## Machine learning approaches
+### Feature selection
+### Model training
+
+# Results and discussion
+
+# Conclusion
+Very good paper.
