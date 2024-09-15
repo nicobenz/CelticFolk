@@ -1,61 +1,1169 @@
 ---
-title: "Analyzing Relationships between Tunes in a Set in Traditional Irish Folk Instrumental Music"
+theme: journal
+title: Factors Influencing Tune Set Selection for Live Session Play in Traditional Irish Folk Instrumental Music
+subtitle: A Statistical and Machine Learning Approach
 author:
   - name: Nico Benz
     email: nico.benz@studserv.uni-leipzig.de
     affiliations:
-      - name: Leipzig University
-        department: Institute for Computer Science
-        group: Computational Humanities
-        url: https://www.uni-leipzig.de
+    - name: Leipzig University
+      department: Institute for Computer Science
+      group: Computational Humanities
+      url: https://www.uni-leipzig.de
 date: 2024-09-15
+keywords:
+  - Computational Musicology
+  - Irish Folk Music
+  - Statistical Model
+  - Machine Learning
 format:
-  html:
-        embed-resources: true
-        code-fold: true
-        toc: true
+    html:
+      embed-resources: true
+      code-fold: true
+      code-overflow: wrap
+      toc: true
+      code-links:
+      - text: Project repository
+        href: https://github.com/nicobenz/CelticFolk
+        icon: github
+      other-links:
+      - text: Dataset origin
+        href: https://github.com/adactio/TheSession-data
+        icon: github
 abstract: |
-  This paper investigates how tunes in traditional Irish folk instrumental music are combined into collections called sets and which properties of tunes within a set are most important in the set's composition. Using statistical and machine learning appraoches like Structural Equation Models (SEM), Permutation Tests and Random Forest classifiers, it will be shown how relevant different musical properties are for tunes to make up a set.
+    This paper investigates how tunes in traditional Irish folk instrumental music are combined into collections called sets and what role similarity of musical properties of tunes plays in the set's composition. Using statistical and machine learning appraoches like Structural Equation Modelling, Permutation Tests, Random Forest classifiers and $k$-means clustering, it will be shown how relevant similar musical properties are for tunes to make up a set. Results show that Structural Equation Modelling and Random Forest classification fail to provide evidence in support of the research question. However, using $k$-means clustering it is shown that tunes of a common set are grouped significantly more often inside the same cluster ($p < 0.001$), indicating a certain similarity of tunes inside a set.
 bibliography: literature.bib
 csl: apa.csl
+title-block-banner: true
 jupyter: python3
 ---
 
+# Acknowledgements {.unnumbered .unlisted}
+This paper used generative AI in parts of the scientific process, namely extracting information from literature by using GPT-4o and generating starting code for data analysis using Claude 3.5 Sonnet. See the prompts used in the appendix. No generative AI has been used in the writing process.
+
 # Introduction
-Irish folk music is part of Celtic folk music, that also contains Breton, Scottish and Welsh music [@porter1998]. In traditional Irish folk music, dance tunes are played live in rapid succession without noticeable breaks in between, creating combinations of tunes called *sets* [@fairbairn1994, 567]. These sets are usually played live in pubs or other places in social gatherings called *sessions* [@kaul2007;@kneafsey2002;@fairbairn1994, 567]. These sessions are very important to Irish culture and identity and have an underlying hierarchy and etiquette to them [@kearney2016, 179, 171-172].
+Irish folk music is part of Celtic folk music, that also contains Breton, Scottish and Welsh music [@porter1998]. In traditional Irish folk music, dance tunes are played live in rapid succession without noticeable breaks in between, creating combinations of tunes called *sets* [@fairbairn1994, 567]. These sets are usually played live in pubs or other places in social gatherings called *sessions* [@kaul2007;@kneafsey2002;@fairbairn1994, 567]. These sessions are very important to Irish culture and identity and have an underlying hierarchy and etiquette to them [@kearney2016, 179, 171-172].[^2]
+
+[^2]: See the [appendix](#sec-appendix-session) for an example of a live session.
 
 Because the tunes of a set are played live in such a rapid fashion that there are no noticeable breaks between them, it can be assumed that tunes need to be compatible in at least some of their musical properties in order to form a valid set. This assumption leads to the formulation of the following hypotheses $H_0$ and $H_1$:
 
-Null Hypothesis ($H_0$): The musical properties of tunes do not have a significant influence on their selection into a set.
+Null Hypothesis ($H_0$): The similarity in musical properties of tunes does not have a significant influence on their selection into a set.
 
-Alternative Hypothesis ($H_1$): The combination of tunes into a set is significantly influenced by the musical properties of the tunes.
+Alternative Hypothesis ($H_1$): The combination of tunes into a set is significantly influenced by the similarity of the tunes musical properties.
 
-This paper tries to find evidence in support of $H_1$ to bring some insights on how set composition is dictated.
+This paper tries to find evidence in support of $H_1$ to bring some insights on how set composition is dictated by similarity of musical properties.
 
 # Related work
 ## Cultural aspects of Irish folk music
-Like most folk musics, Irish folk does not play a large role in musicology. However, there is some research on the cultural background of Irish folk music. A central aspect of Irish folk music are the aforementioned sessions, in which Irish folk dance tunes are played. These sessions became popular during the 1950s and 60s, while tunes where mostly played at home or at public fairs before that time [@kearney2016, 177]. Sessions are mostly played by a group of paid or unpaid musicians where a structure of hierarchy and etiquette is formed [@kearney2016, 172;]. In session etiquette, musicians take turns in selecting sets and the tunes contained in them [@tolmie2016, 343]. Since tunes in Irish folk are mostly not noted and melodies are played from memory, sessions mostly have tunes with simplified melodic motifs where variations are either created through transpositions or individual ornamentation rather than musically intricate variations [@fairbairn1994, 594; @doherty2022, 22].
+Like most folk musics, Irish folk does not play a large role in musicology. However, there is some research on the cultural background of Irish folk music. A central aspect of Irish folk music are the aforementioned sessions, in which Irish folk dance tunes are played. These sessions became popular during the 1950s and 60s, while tunes where mostly played at home or at public fairs before that time [@kearney2016, 177]. Sessions are mostly played by a group of paid or unpaid musicians where a structure of hierarchy and etiquette is formed [@kearney2016, 172]. In session etiquette, musicians take turns in selecting sets and the tunes contained in them [@tolmie2016, 343]. Since tunes in Irish folk are mostly not noted and melodies are played from memory, sessions mostly have tunes with simplified melodic motifs where variations are either created through transpositions or individual ornamentation rather than musically intricate variations [@fairbairn1994, 594; @doherty2022, 22].
+
 
 ## Structure of Irish folk music
-The research situation on the musical properties of Irish folk is not as good established as the research on the cultural aspects. However, @gainza2006 gives a good overview of some musical properties of Irish folk. Tunes in Irish folk are based on the church modes Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian and Locrian, where Ionian and Aeolian are identical to the classical western modes of Major and Minor, with some root notes being more common for each mode [@gainza2006, 13]. Most of Irish folk music is dance music with destinction between different kinds of dance tunes like jigs, hornpipes and reels, with slower genres like airs being an exception [@gainza2006, 14]. These tune types differ in several properties like meter, tempo or accentuated beats where reels and hornpipes have mostly 4/4 time signatures and jigs or double jigs mostly 6/8 time signature [@doherty2022, 23; @gainza2006, 14]. Phrase structure in Irish folk tunes is very simplistic, offering 8-bar phrases with division into two 4-bar in most cases, which forms a very predictable and easily repeated structure that fasilitates of individual create input [@doherty2022, 23-24; @fairbairn1994, 597]. In most cases, two of these 8-bar parts are combined into a tune of 16 bars in length, that are repeated in the form of AABB [@hillhouse2005, 24]. This focus on simplistic structure and easily repeated phrases extends further to the concept of sets. Since they are not rehearsed by the group of musicians, they need a very loose structure to stay flexible and interactive [@fairbairn1994, 567]. During live play, tunes loose some of their melodic intricacies in favor of easier group play and a natural and spontaneous evolving of the tune in musical performance that values social experience higher than display of musical proficiency [@fairbairn1994]. To further faciliate the open structure of sets, tunes often end with conventional cadences and end-rhymes for easy closure and repetition of phrases, leading to motivic repetition either within individual parts as internal repetition or across different sections as external repetition [@doherty2022, 24, 29-31].
+The research situation on the musical properties of Irish folk is not as good established as the research on the cultural aspects. However, @gainza2006 gives a good overview of some musical properties of Irish folk. Tunes in Irish folk are based on the church modes Ionian, Dorian, Phrygian, Lydian, Mixolydian, Aeolian and Locrian, where Ionian and Aeolian are identical to the classical western modes of Major and Minor, with some root notes being more common for each mode [@gainza2006, 13]. Most of Irish folk music is dance music with destinction between different kinds of dance tunes like jigs, hornpipes and reels, with slower genres like airs being an exception [@gainza2006, 14]. These tune types differ in several properties like meter, tempo or accentuated beats where reels and hornpipes have mostly 4/4 time signatures and jigs or double jigs mostly 6/8 time signature [@doherty2022, 23; @gainza2006, 14]. Phrase structure in Irish folk tunes is very simplistic, offering 8-bar phrases with division into two 4-bar in most cases, which forms a very predictable and easily repeated structure that facilitates individual creative input [@doherty2022, 23-24; @fairbairn1994, 597]. In most cases, two of these 8-bar parts are combined into a tune of 16 bars in length, that are repeated in the form of AABB [@hillhouse2005, 24]. This focus on simplistic structure and easily repeated phrases extends further to the concept of sets. Since they are not rehearsed by the group of musicians, they need a very loose structure to stay flexible and interactive [@fairbairn1994, 567]. During live play, tunes lose some of their melodic intricacies in favor of easier group play and a natural and spontaneous evolving of the tune in musical performance that values social experience higher than display of musical proficiency [@fairbairn1994, 595]. To further facilitate the open structure of sets, tunes often end with conventional cadences and end-rhymes for easy closure and repetition of phrases, leading to motivic repetition either within individual parts as internal repetition or across different sections as external repetition [@doherty2022, 24, 29-31].
 
-While musicians adhere rather strictly to mode and time signature, they have freedom in individual phrasing and slight changes in melody called ornamentation [@gainza2006, 15-16]. These ornamentations are characteristic for regional and personal style and constist of rolls, double roll, triplets, grace notes, crans and trills [@mccullough1977, 86]. These kind of musical phrasings include nicely into group oriented play during sessions, which is mostly faster and offers less room for variation [@fairbairn1994, 594-595].
+While musicians adhere rather strictly to mode and time signature, they have freedom in individual phrasing and slight changes in melody called ornamentation [@gainza2006, 15-16]. These ornamentations are characteristic for regional and personal style and consist of rolls, double roll, triplets, grace notes, crans and trills [@mccullough1977, 86]. These kind of musical phrasings include nicely into group oriented play during sessions, which is mostly faster and offers less room for variation [@fairbairn1994, 594-595; @stock2004, 43]. The concept of ornamentation and individual change in phrasing of the tunes lead to a theory of *tune families* which is a collection of all individual variations of a certain tune where despite ornamentation and individual phrasing the basic structure of the tune can still be recognised [@hillhouse2005, 10].
 
 ## Computational approaches to Irish folk music
+Irish folk music was subject to computationally driven research as part of folk music as a whole. There have been studies mainly in genre prediction and in the area of musical information retrieval.
 
-# Methodology
+@andreas2013 used a $k$-means clustering approach to see if different kinds of folk music audio snippets end up in similar clusters. They used low level features like zero crossing rate, spectral centroid, and spectral brightness among others [@andreas2013, 3]. They could show that Arabic and Iranian folk songs form a cluster as well als songs from Turkey and Syria [@andreas2013, 4]. Western folk music formed two different clusters that were not further described and Greek and Crypriot folk music fell into another cluster [@andreas2013, 4].
+
+@guimaraes2024 compared different feature engineering and deep learning methods for detection of tune similarity. Their goal was to see how well these approaches could detect the same tune in different recordings [@guimaraes2024, 10]. They touched about the aforementioned concept of tune families [@hillhouse2005, 10] and how these regional and individual variations of a core tune are still detectable by machine learning approaches. They could show that deep learning methods outperformed feature engineering [@guimaraes2024, 65-66].
+
+@janssen2017 tried finding computational approaches to identify melodic segments in Dutch folk songs. They used wavelet transform, euclidian distance, city block distance, local alignment and structure induction. Their result could show that structure induction and local alignment worked best [@janssen2017, 124-126].
+
+@kermit2015 trained classifier models like Support Vector Machines and Random Forests to classify dance types in Irish and Scandinavian folk music. They used audio features and could achieve good results with a test error rate of less than 0.1.
+
+@sturm2016 used deep learning methods to transcribe folk music. They trained long short-term memory (LSTM) networks on the ABC data of about 23,000 folk songs to create a generative model for folk songs. They conclude, that their model Folk-RNN is especially capable in creating Celtic folk tunes, because those tunes revolve around creating new tunes by variation of established tunes [@sturm2016, 14].
+
+@vercoe2001 used Hidden Markov Models to classify irish folk music. They used contour pitch and intervals as features and provided evidence that interval performed better than contour pitch [@vercoe2001].
+
+@vila2023 used statistical methods to evaluate melodies from Irish folk music in ABC notation. They used Folk-RNN v2, which is an improved model of the one presented in @sturm2016, to generate several thousand style imitations of single tunes [@vila2023, 3]. Their aim was to create a tool that could find typical elements and outliers within a collection. They used ABC features for their methods and used several different distance measurements like cosine similarity, Jaccard index and Levenshtein distance. Using statistical methods like Mann-Whitney test, Kolmogorov-Smirnov test and Kruskal-Wallis test they presented evidence that Levenshtein distance performed best in finding melody segments [@vila2023, 14].
 
 # Data overview
+The data for this paper comes from [The Session](https://thesession.org) [@thesession]. It is a community-sourced website on traditional Irish folk tunes. Users can upload data on Irish folk tunes related to different concepts like occurrences of tunes in sets or in recordings. New tunes can also be uploaded or variations on existing tunes added to a tune record. Tunes are saved with lots of musical metadata: Type of tune (e.g. reel, jig, hornpipe, barndance, slip jig, etc.), mode (major, minor, dorian, etc.), meter or time signature (4/4, 6/8, 9/8, etc.) and melody in ABC notation. Under the name of one tune there can be multiple variations of these musical properties based on individual ornamentation or individual style. When linked to a set or recording, the specified variation is linked.
+
+The main focus of The Session is traditional Irish folk tunes but adding music from other music is not prohibited. The FAQ on the website answers the question, if non-Irish tunes are allowed or not, like this: *The focus of The Session is traditional Irish music. The occassional non-Irish tune is okay, if it’s played at an Irish session. But as with submitting self-penned compositions, you should balance every non-Irish tune submission with four or five trad tune settings.* [@thesession, FAQ]
+
+On their GitHub page, The Session offers several dumps of their data in JSON, based on what the user is interested in, like tunes, sessions, events, recordings, sets of tunes, aliases of tune names and popularity of tunes. For this paper, only the sets of tunes JSON dump was used. The structure of the data can be seen in @fig-raw-data, where the first two items are shown.
+```{python}
+#| label: fig-raw-data
+#| fig-cap: "Structure of the raw dataset"
+#| output-location: column
+#| echo: false
+import json
+from IPython.display import display, Markdown
+
+with open("data/sets.json") as f:
+    sets = json.load(f)
+
+json_output = json.dumps(sets[:2], indent=2)
+display(Markdown(f"```json\n{json_output}\n```"))
+```
+The dataset consists of a single list of 164,893 tunes, where tunes are realised as JSON objects. In these objects, every tune has the same keys with most of them being self-explanatory. For the others, *tuneset* is the unique identifier of the set, *settingorder* is the position of that tune inside the set and *setting_id* represents the identifier of the variation of a tune. Most sets contain two or three tunes but more are possible. See @fig-data-count for an overview of the set length counts.
+```{python}
+#| label: fig-data-count
+#| fig-cap: "Numbers of sets per size"
+#| output-location: column
+#| echo: false
+
+import json
+from IPython.display import display, Markdown
+from collections import defaultdict, Counter
+
+with open("data/sets.json") as f:
+    sets = json.load(f)
+
+tunesets = defaultdict(list)
+for item in sets:
+    if "tuneset" in item:
+        tunesets[item["tuneset"]].append(item)
+
+lengths = [len(tuneset) for tuneset in tunesets.values()]
+length_counts = dict(Counter(lengths))
+
+md_output = f"""
+| Set Length | Count |
+|----------------|-------|
+"""
+
+for length, count in sorted(length_counts.items()):
+    md_output += f"| {length} | {count} |\n"
+
+md_output += "\n"
+
+display(Markdown(md_output))
+```
+
+# Methodology
+During implementation of methods to address the research qustion, some unforseen issues were encountered which lead to a change in how to approach the research question. For scientific rigor, the initial approach is reported as well.
+
+## Initial approach
+The first approach to analysing which musical properties of tunes had influence on their occurrence in a set, was Structural Equation Modelling (SEM) [@bielby1977]. SEM is a combination of different statistical methods like factor analysis and regression used for testing complex relationships between multiple variables simultaneously. It consists of a measurement model, that relates observed to latent variables, and a structural model that tests the significance of the latent variables. It aims to explain how well latent variables, that are created by assuming a relationship between different observed variables, can explain the observed dataset by giving a p-value. They also estimate how much value each observed variable contributes to the strength of the latent variable. This results in answering the questions if the assumed relationship is statistically significant or not and how responsible each observed variable is in the relationship.
+
+SEM is a good fit for the research question discussed in this paper because each tune in Irish folk music has a number of different musical properties where it can be assumed that most of them constitute an indirect variable of how well a tune is able to fit in a given set of tunes. However, using SEM to find relationships yielded an insignificant result. This lead to an alternative approach using other methods, that are described below.
+
+## Revised approach
+The insignificant results of the SEM lead to taking a step back and choosing a much broader method than the very specific SEM to see if there are any relationships in the dataset at all. For this, permutation tests were used. In permutation tests, the real dataset is compared to a high number of randomly shuffled version of it. Permutation tests don't test for relationships on their own as they can be regarding a testing paradigm more than an actual test. Instead, they are combined with different actual stastistical tests that are applied to all shuffled datasets to compare it to the real data. In the permutation tests used in this paper, Shannon entropy [@shannon1948], Jaccard similarity [@jaccard1901] and Chi-square test [@pearson1900] were used as test statistics.
+
+The Shannon entropy is a measure from information theory that evaluates how certain or uncertain it is that an item fits into a collection based on the properties that all items have. In the context of Irish folk sets, if the assumption of some kind of relatedness between tunes holds, the real data should show a lower Shannon entropy because it has a higher predictability than the permuated sets because of their random nature.
+
+The Jaccard similarity is a measure of set overlap. In the context of Irish folk sets, real sets should have a higher Jaccard similarity because under the $H_1$ it can be assumed that tunes in a set overlap in certain musical properties.
+
+The Chi-square test estimates the goodness of fit of certain data when the observed values are compared to the expected values. In the case of Irish folk songs in a permutation test setting, the real tune sets are the observed values and are compared to a randomly shuffled permuation set for the number of iterations. If the $H_1$ holds, the observed data should differ significantly from the expected distribution because in a permuation test setting the expected distribution is purely random. In this case the Chi-square test can provide evidence that the order of sets is not random and therefore is a relationship between tunes in a set. This permutation test is well suited to find evidence if the choise of tunes is purely random or not. However, in this setup this method cannot dive deeper into the relationships that could be there between tunes within a set, because it is too broad for that.
+
+To get more information if position inside a set matters, two Random Forest (RF) classifier will be used [@ho1995]. Random forests are a machine learning technique that derived from descision trees. It uses multiple of them to combine the predictions of multiple trees to increase accuracy and also reduce chance of overfitting. Each tree is built on a random subset of the data and features, which makes the model perform better in cases of noise and variations in the data. The results of the individual trees are then combined for the final result.
+
+The first classifier will be trained to predict the tunes position inside a set. This can give insight on the question if tunes need certain properties to fulfil a certain position of a set. The second approach is training a binary classifier on the correct and mixed order of sets to provide another perspective on tune position in a set.
+
+In addition to this supervised approach, $k$-means clustering will also be utilised as an unsupervised approach [@macqueen1967]. In $k$-means clustering, a dataset of $n$ samples will be associated to $k$ clusters based on their similarity to surrounding items. The algorithm works by assigning each data point to the center of the nearest cluster center.
+
+The elbow method  will be used for finding the optimal $k$ [@thorndike1953]. The elbow method is an optimisation strategy that aims to find the optimal $k$ in a range of possible $k$. It works by identifying the value of $k$ after which the increase in value decreases most drastically, thus resulting in the last point with strong increase.
+
+In the $k$-means clustering, tunes of set size two and three will be clustered separately. These clusters are then checked for overlap in sets, so that the count of sets, where tunes are in the same set, can then be compared to the baseline of a random clusters. The results are then compared using Chi-square test.
 
 # Experimental design
 ## Data cleaning
-## Dataset sampling
-## Statistical approaches
-## Machine learning approaches
-### Feature selection
-### Model training
+The data had an overall very good quality with no missing matches in the relevant feature values. However, one entry of each tune was split into two features. The mode was given as a concatenation of root note and mode, like `Edorian`, which corresponded to dorian mode in the key of E. This value was consistently split after the first character to separate root note from mode to create individual features for easier overlap detection in root notes across modes or in modes with differing root notes.
 
-# Results and discussion
+## Dataset sampling
+Like already shown in @fig-data-count, there are many different set lengths which smaller sets having the most counts. In this paper, as already mentioned, only sets of length two and three will be analysed. This is due to the fact that lengths of one, two and three having the highest counts, while higher set lengths have smaller counts and therefore not enough data to make results comparable to smaller sets. Sets of length one are also excluded because sets need at least two tunes to have the possibility of forming relationships between the tunes contained.
+
+Since the dataset was structured as a list, it was first transformed to a list of lists, where the sublists represented sets. This was done by using the set identifier to identify tunes that belonged to a set. In another step, all irrelevant data was removed from the tune entries to only keep *type* and *meter* together with the values *mode* and *tonic*, that were split from the initial *mode* value of the dataset.
+
+## Statistical approaches
+### Structural Equation Modelling
+To use SEM in Python, the library `semopy` was used along some supporting libraries for data handling and label encoding. See the concrete implementation of the SEM below in @fig-code-sem.
+```{python}
+#| label: fig-code-sem
+#| fig-cap: "SEM implementation"
+#| output-location: column
+#| echo: true
+#| eval: false
+#| fig-cap-location: bottom
+from semopy import Model, Optimizer
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+
+
+def use_sem(data):
+    # load to df
+    df = pd.DataFrame(data)
+
+    # prepare labeling
+    le_type = LabelEncoder()
+    le_meter = LabelEncoder()
+    le_mode = LabelEncoder()
+    le_tonic = LabelEncoder()
+
+    # label process
+    df['type'] = le_type.fit_transform(df['type'])
+    df['meter'] = le_meter.fit_transform(df['meter'])
+    df['mode'] = le_mode.fit_transform(df['mode'])
+    df['tonic'] = le_tonic.fit_transform(df['tonic'])
+
+    # describe model parameters
+    model_desc = """
+    # Measurement model
+    Set_Formation =~ meter + type + mode + tonic
+    """
+
+    # create model class and load data
+    model = Model(model_desc)
+    model.load_dataset(df)
+
+    # optimise
+    opt = Optimizer(model)
+    opt.optimize()
+
+    print(model.inspect())
+
+    # print the models fit indices
+    fit = model.fit()
+    print(fit)
+```
+
+### Permutation tests
+The permutation tests were created by using a custom approach with 10,000 permuations for each condition. See @fig-code-pt-process for the implementation of Shannon entropy, Jaccard similarity, and Chi-square test.[^1]
+
+[^1]: Only the relevant code sections are explained here. Consult the linked project repository for the full code.
+```{python}
+#| eval: false
+#| echo: true
+#| label: fig-code-pt-process
+def test_statistic_entropy(sets, features):
+    def attribute_diversity(attribute_list):
+        counts = Counter(attribute_list)
+        probabilities = [count / len(attribute_list) for count in counts.values()]
+        entropy = -sum(p * np.log(p) for p in probabilities)  # Shannon entropy
+        return entropy
+
+    def tonic_spread(tonic_values):
+        circle_of_fifths = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'F', 'Bb', 'Eb', 'Ab']
+        indices = [circle_of_fifths.index(tonic) for tonic in tonic_values]
+        spread = np.std(indices)
+        return spread
+
+    total_score = 0
+    for tune_set in sets:
+        set_score = 0
+        for feature in features:
+            if feature == 'tonic':
+                values = [tune[feature] for tune in tune_set]
+                similarity = 1 / (1 + tonic_spread(values))
+            else:
+                values = [tune[feature] for tune in tune_set]
+                similarity = 1 / (1 + attribute_diversity(values))
+            set_score += similarity
+
+        set_score /= len(features)
+        total_score += set_score
+
+    return total_score / len(sets) if sets else 0
+
+
+def test_statistic_jaccard(sets, features):
+    def jaccard_similarity(set1, set2):
+        intersection = len(set(set1).intersection(set(set2)))
+        union = len(set(set1).union(set(set2)))
+        return intersection / union if union > 0 else 0
+
+    total_score = 0
+    for tune_set in sets:
+        set_score = 0
+        comparisons = 0
+        for tune1, tune2 in combinations(tune_set, 2):
+            feature_similarity = sum(jaccard_similarity([tune1[f]], [tune2[f]]) for f in features)
+            set_score += feature_similarity / len(features)
+            comparisons += 1
+
+        total_score += set_score / comparisons if comparisons > 0 else 0
+
+    return total_score / len(sets) if sets else 0
+
+
+def test_statistic_chi_square(sets, features):
+    def calculate_overall_frequencies(all_attr):
+        overall_counts = Counter(all_attr)
+        total = sum(overall_counts.values())
+        return {attr: count / total for attr, count in overall_counts.items()}
+
+    all_attributes = {f: [tune[f] for tune_set in sets for tune in tune_set] for f in features}
+    overall_freq = {f: calculate_overall_frequencies(attrs) for f, attrs in all_attributes.items()}
+
+    def chi_square_test(attribute_list, overall_frequency):
+        observed = Counter(attribute_list)
+        n = len(attribute_list)
+
+        all_categories = set(overall_frequency.keys()) | set(observed.keys())
+        observed_array = np.array([observed.get(cat, 0) for cat in all_categories])
+        expected_array = np.array([overall_frequency.get(cat, 0) * n for cat in all_categories])
+
+        expected_array = np.maximum(expected_array, 0.01)
+
+        chi2 = np.sum((observed_array - expected_array) ** 2 / expected_array)
+        return chi2
+
+    total_score = 0
+    for tune_set in sets:
+        set_score = sum(chi_square_test([tune[f] for tune in tune_set], overall_freq[f]) for f in features)
+        total_score += set_score / len(features)
+
+    return total_score / len(sets) if sets else 0
+```
+This code section prepares the actual statistics that are then compared to the permuated datasets. For the features, some of them are not directly used like they are present in the dataset. Only measuring direct overlap would leave out potentially insightful relationships between values in cases where there is no direct overlap, but still a relation like root note differences between neighbouring tunes that fall in certain intervals. The test statistics account for this by measuring the interval.
+
+The permutation step then compares the actual statistics with the permuted statistics by using the code shown in @fig-code-pt-permutation.
+```{python}
+#| eval: false
+#| echo: true
+#| label: fig-code-pt-permutation
+def permutation_testing(tqdm_label, tune_set, test_statistic, features=None, n_resamples=10_000):
+    all_tunes = list(chain.from_iterable(tune_set))
+
+    # Check if the test_statistic function expects features
+    if 'features' in test_statistic.__code__.co_varnames:
+        actual_statistic = test_statistic(tune_set, features)
+    else:
+        actual_statistic = test_statistic(tune_set)
+
+    permuted_statistics = []
+
+    for _ in tqdm(range(n_resamples), desc=tqdm_label):
+        np.random.shuffle(all_tunes)
+        start = 0
+        permuted_sets = []
+        for set_size in [len(s) for s in tune_set]:
+            permuted_sets.append(all_tunes[start:start + set_size])
+            start += set_size
+
+        # Check if the test_statistic function expects features
+        if 'features' in test_statistic.__code__.co_varnames:
+            permuted_statistic = test_statistic(permuted_sets, features)
+        else:
+            permuted_statistic = test_statistic(permuted_sets)
+
+        permuted_statistics.append(permuted_statistic)
+
+    p_value = calculate_p_value(actual_statistic, permuted_statistics)
+
+    results = {
+        "n_resamples": n_resamples,
+        "p_value": p_value,
+        "actual_statistic": actual_statistic,
+        "min_permuted_statistic": min(permuted_statistics),
+        "max_permuted_statistic": max(permuted_statistics),
+        "mean_permuted_statistic": np.mean(permuted_statistics),
+        "std_dev_permuted_statistics": np.std(permuted_statistics)
+    }
+
+    return results
+```
+The results are then saved to a JSON file.
+
+## Machine learning approaches
+### Random forest classification
+#### Feature selection
+The RF classifiers are trained in several conditions. The first condition, where the position of a tune in a set is predicted, uses a combination of meter, type, mode and tonic while the other conditions use each of these features individually. Set sizes are not mixed and each classifier is trained for each condition on sets of size two and three separately.
+
+For the features in the second classifier, where the correct order of a set is predicted, the same approach as in the first RF is used: All mentioned features together first and then separately as well. The order permutation was done by simply reversing the set in the case of set size two and by using this pattern for set size three: First tune moves to position three, second tune moves to positon one and third tune moves to position two. This results to a consistent break of order while still keeping a balanced dataset of true and false labels.
+
+#### Model training
+The RF classifiers were taken from the implementation in `scikit-learn`. Several hyperparameters were tested but the default values with 100 estimators performed best, but nearly identical to other values. See @fig-code-rf-1 for the classifier predicting the tunes position.
+```{python}
+#| eval: false
+#| echo: true
+#| label: fig-code-rf-1
+def random_forest_tune_position(X, y):
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    clf = RandomForestClassifier(n_estimators=100, random_state=42)
+
+    fold_results = []
+    for fold, (train_index, test_index) in enumerate(skf.split(X, y), 1):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+
+        precision, recall, f1, _ = precision_recall_fscore_support(y_test, y_pred, average='weighted', zero_division=0)
+        accuracy = accuracy_score(y_test, y_pred)
+
+        fold_results.append({
+            'fold': fold,
+            'precision': float(precision),
+            'recall': float(recall),
+            'f1': float(f1),
+            'accuracy': float(accuracy),
+            'support': int(len(y_test))
+        })
+
+    # Calculate feature importance
+    clf.fit(X, y)  # Fit on entire dataset for overall feature importance
+    feature_importance = pd.DataFrame({
+        'feature': X.columns,
+        'importance': clf.feature_importances_
+    }).sort_values('importance', ascending=False)
+
+    return {
+        'fold_results': fold_results,
+        'feature_importance': feature_importance.to_dict(orient='records')
+    }
+```
+See @fig-code-rf-2 for the binary classifier predicting the correect order of tunes within a set.
+```{python}
+#| eval: false
+#| echo: true
+#| label: fig-code-rf-2
+def random_forest_tune_order(X, y, feature_names):
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    clf = RandomForestClassifier(n_estimators=100, random_state=42)
+
+    # Initialize LabelEncoder for each feature
+    label_encoders = [LabelEncoder() for _ in range(X.shape[1])]
+
+    # Fit and transform each feature
+    X_encoded = np.array([le.fit_transform(X[:, i]) for i, le in enumerate(label_encoders)]).T
+
+    fold_metrics = defaultdict(list)
+    for fold, (train_index, test_index) in enumerate(skf.split(X_encoded, y), 1):
+        X_train, X_test = X_encoded[train_index], X_encoded[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+
+        precision, recall, f1, _ = precision_recall_fscore_support(y_test, y_pred, average='weighted', zero_division=0)
+        accuracy = accuracy_score(y_test, y_pred)
+
+        fold_metrics['precision'].append(precision)
+        fold_metrics['recall'].append(recall)
+        fold_metrics['f1'].append(f1)
+        fold_metrics['accuracy'].append(accuracy)
+
+    # Calculate aggregate statistics
+    aggregate_results = {}
+    for metric, values in fold_metrics.items():
+        aggregate_results[metric] = {
+            'min': float(np.min(values)),
+            'max': float(np.max(values)),
+            'mean': float(np.mean(values)),
+            'median': float(np.median(values)),
+            'std': float(np.std(values))
+        }
+
+    # Calculate feature importance
+    clf.fit(X_encoded, y)  # Fit on entire encoded dataset for overall feature importance
+
+    # Aggregate feature importances
+    feature_importance_dict = defaultdict(float)
+    for feature, importance in zip(feature_names, clf.feature_importances_):
+        feature_type = feature.split('_')[0]  # Extract the feature type (e.g., 'tonic' from 'tonic_1')
+        feature_importance_dict[feature_type] += importance
+
+    # Convert to list and sort
+    feature_importance = [
+        {'feature': feature, 'importance': importance}
+        for feature, importance in feature_importance_dict.items()
+    ]
+    feature_importance.sort(key=lambda x: x['importance'], reverse=True)
+
+    return {
+        'fold_results': aggregate_results,
+        'feature_importance': feature_importance
+    }
+```
+
+### $k$-mean clustering
+For the $k$-means clustering, the implementation of `scikit-learn` was used, including the features *meter*, *mode*, *type* and *tonic*. See @fig-k-means for the code.
+```{python}
+#| label: fig-k-means
+#| fig-cap: "SEM results"
+#| output-location: column
+#| echo: true
+#| eval: false
+#| fig-cap-location: bottom
+from sklearn.cluster import KMeans
+
+def run_k_means(data, tune_sets, k):
+    kmeans = KMeans(n_clusters=k, random_state=42)
+    cluster_labels = kmeans.fit_predict(data)
+
+    set_clusters = []
+    for i in range(0, len(cluster_labels), len(tune_sets[0])):
+        set_clusters.append(cluster_labels[i:i + len(tune_sets[0])])
+
+    total_sets = len(set_clusters)
+
+    if len(tune_sets[0]) == 2:
+        same_cluster_count = sum(len(set(clusters)) == 1 for clusters in set_clusters)
+        same_cluster_percentage = (same_cluster_count / total_sets * 100) if total_sets > 0 else 0
+
+        result = {
+            "total_sets": total_sets,
+            "same_cluster": same_cluster_count,
+            "same_cluster_percentage": same_cluster_percentage,
+        }
+
+    elif len(tune_sets[0]) == 3:
+        all_same_cluster_count = sum(len(set(clusters)) == 1 for clusters in set_clusters)
+        two_same_cluster_count = sum(len(set(clusters)) == 2 for clusters in set_clusters)
+
+        all_same_cluster_percentage = (all_same_cluster_count / total_sets * 100) if total_sets > 0 else 0
+        two_same_cluster_percentage = (two_same_cluster_count / total_sets * 100) if total_sets > 0 else 0
+
+        result = {
+            "total_sets": total_sets,
+            "all_same_cluster": all_same_cluster_count,
+            "all_same_cluster_percentage": all_same_cluster_percentage,
+            "two_same_cluster": two_same_cluster_count,
+            "two_same_cluster_percentage": two_same_cluster_percentage,
+        }
+
+    cluster_sizes = Counter(cluster_labels)
+    result["cluster_distribution"] = dict(cluster_sizes)
+```
+For the elbow method, the `KneeLocator` class of the `kneed` module was used. See @fig-elbow-method for the code.
+```{python}
+#| label: fig-elbow-method
+#| fig-cap: "SEM results"
+#| output-location: column
+#| echo: true
+#| eval: false
+#| fig-cap-location: bottom
+from kneed import KneeLocator
+
+def elbow_method(data, max_clusters=100):
+    inertias = []
+    for k in tqdm(range(1, max_clusters + 1)):
+        kmeans = KMeans(n_clusters=k, random_state=42)
+        kmeans.fit(data)
+        inertias.append(kmeans.inertia_)
+
+    kl = KneeLocator(range(1, max_clusters + 1), inertias, curve="convex", direction="decreasing")
+    elbow_point = kl.elbow
+
+    fig = make_subplots(rows=1, cols=1)
+    fig.add_trace(go.Scatter(x=list(range(1, max_clusters + 1)), y=inertias, mode='lines+markers', name='Inertia'))
+    if elbow_point:
+        fig.add_vline(x=elbow_point, line_dash="dash", line_color="red",
+                      annotation_text=f"Elbow point: {elbow_point}",
+                      annotation_position="top right")
+    fig.update_layout(title='Elbow Method for Optimal k', xaxis_title='Number of clusters (k)',
+                      yaxis_title='Inertia', showlegend=True)
+
+    return elbow_point, inertias, fig
+```
+
+
+# Results
+## Structural equation modelling
+See @fig-result-sem below for the direct output of the SEM calculation.
+```{python}
+#| label: fig-result-sem
+#| fig-cap: "SEM results"
+#| output-location: column
+#| echo: false
+#| eval: true
+#| fig-cap-location: bottom
+with open("results/sem.json") as f:
+    sem_results = json.load(f)
+
+print(sem_results["inspect"])
+print("")
+print(sem_results["fit"])
+```
+Like already mentioned earlier, the results of the SEM are not significant with very high p-values.
+
+## Permutation tests
+Because of that, the permutation test were supposed to reveal if there is some sort of relationship in the data. See @tbl-entropy for the results on Shannon entropy for both set sizes.
+
+: Entropy Results {#tbl-entropy}
+
+| Attribute | Two Tunes        | Three Tunes      |
+|-----------|------------------|------------------|
+| All       | 0.85 (p < 0.001) | 0.80 (p < 0.001) |
+| Type      | 0.93 (p < 0.001) | 0.93 (p < 0.001) |
+| Meter     | 0.95 (p < 0.001) | 0.95 (p < 0.001) |
+| Mode      | 0.81 (p < 0.001) | 0.72 (p < 0.001) |
+| Tonic     | 0.73 (p < 0.001) | 0.61 (p < 0.001) |
+
+Results are highly significant across all sizes and conditions, with similar values for both set sizes. Tonic has the lowest entropy while meter and type have the highest entropy in both set sizes. See @tbl-jaccard for the results using Jaccard similarity.
+
+: Jaccard Similarity Results {#tbl-jaccard}
+
+| Attribute | Two Tunes        | Three Tunes      |
+|-----------|------------------|------------------|
+| All       | 0.65 (p < 0.001) | 0.65 (p < 0.001) |
+| Type      | 0.83 (p < 0.001) | 0.88 (p < 0.001) |
+| Meter     | 0.88 (p < 0.001) | 0.91 (p < 0.001) |
+| Mode      | 0.54 (p < 0.001) | 0.50 (p < 0.001) |
+| Tonic     | 0.36 (p < 0.001) | 0.30 (p < 0.001) |
+
+Using this metric, all conditions are highly significant for both set sizes. For both sizes meter and type have the highest similarity score while mode and tonic have the lowest. See table @tbl-chi-square for the results of the Chi-square statistic.
+
+: Chi-Square Statistics Results {#tbl-chi-square}
+
+| Attribute | Two Tunes         | Three Tunes       |
+|-----------|-------------------|-------------------|
+| All       | 9.03 (p < 0.001)  | 11.91 (p < 0.001) |
+| Type      | 16.42 (p < 0.001) | 23.69 (p < 0.001) |
+| Meter     | 9.21 (p < 0.001)  | 13.33 (p < 0.001) |
+| Mode      | 3.52 (p < 0.001)  | 3.61 (p < 0.001)  |
+| Tonic     | 6.98 (p < 0.001)  | 7.00 (p < 0.001)  |
+
+Again, all conditions are highly significant for both sizes. Scores are similar for both set sizes with set size three having higher values across all properties. Type and meter have the highest scores while mode and tonic score the lowest.
+
+## Random forest classifiers
+Here is RF condition one for set size two in @tbl-rf1-2.
+
+: Position Classification for Set Size 2 {#tbl-rf1-2}
+
+| Feature | Metric    | Mean    | Std Dev | Min     | Max     | Median  |
+|---------|-----------|---------|---------|---------|---------|---------|
+| All     | Precision | 0.54    | 0.003   | 0.54    | 0.55    | 0.54    |
+|         | Recall    | 0.54    | 0.003   | 0.54    | 0.55    | 0.54    |
+|         | F1        | 0.54    | 0.003   | 0.53    | 0.54    | 0.54    |
+|         | Accuracy  | 0.54    | 0.003   | 0.54    | 0.55    | 0.54    |
+|         | Support   | 9,941.6 | 0.499   | 9,941.0 | 9,942.0 | 9,942.0 |
+| Type    | Precision | 0.52    | 0.004   | 0.51    | 0.52    | 0.52    |
+|         | Recall    | 0.52    | 0.005   | 0.51    | 0.53    | 0.52    |
+|         | F1        | 0.51    | 0.013   | 0.47    | 0.53    | 0.51    |
+|         | Accuracy  | 0.52    | 0.005   | 0.51    | 0.53    | 0.52    |
+|         | Support   | 9,941.6 | 0.499   | 9,941.0 | 9,942.0 | 9,942.0 |
+| Meter   | Precision | 0.51    | 0.005   | 0.50    | 0.52    | 0.51    |
+|         | Recall    | 0.51    | 0.004   | 0.50    | 0.51    | 0.51    |
+|         | F1        | 0.49    | 0.027   | 0.44    | 0.51    | 0.51    |
+|         | Accuracy  | 0.51    | 0.004   | 0.50    | 0.51    | 0.51    |
+|         | Support   | 9,941.6 | 0.499   | 9,941.0 | 9,942.0 | 9,942.0 |
+| Mode    | Precision | 0.52    | 0.007   | 0.51    | 0.53    | 0.52    |
+|         | Recall    | 0.52    | 0.007   | 0.51    | 0.53    | 0.52    |
+|         | F1        | 0.51    | 0.007   | 0.50    | 0.52    | 0.51    |
+|         | Accuracy  | 0.52    | 0.007   | 0.51    | 0.53    | 0.52    |
+|         | Support   | 9,941.6 | 0.499   | 9,941.0 | 9,942.0 | 9,942.0 |
+| Tonic   | Precision | 0.53    | 0.005   | 0.52    | 0.54    | 0.53    |
+|         | Recall    | 0.53    | 0.005   | 0.52    | 0.54    | 0.53    |
+|         | F1        | 0.53    | 0.005   | 0.52    | 0.54    | 0.53    |
+|         | Accuracy  | 0.53    | 0.005   | 0.52    | 0.54    | 0.53    |
+|         | Support   | 9,941.6 | 0.499   | 9,941.0 | 9,942.0 | 9,942.0 |
+
+The classification F1 score using all features is about 0.54, which is slightly above the random baseline of 0.5. Using the features individually, most F1 scores are very close to the random baseline of 0.5. See @tbl-rf1-3 for set size of three.
+
+: Position Classification for Set Size 3 {#tbl-rf1-3}
+
+| Feature | Metric    | Mean     | Std Dev | Min      | Max      | Median   |
+|---------|-----------|----------|---------|----------|----------|----------|
+| All     | Precision | 0.40     | 0.012   | 0.39     | 0.41     | 0.41     |
+|         | Recall    | 0.39     | 0.002   | 0.38     | 0.39     | 0.39     |
+|         | F1        | 0.37     | 0.009   | 0.36     | 0.38     | 0.36     |
+|         | Accuracy  | 0.39     | 0.002   | 0.38     | 0.39     | 0.39     |
+|         | Support   | 14,108.4 | 0.490   | 14,108.0 | 14,109.0 | 14,108.0 |
+| Type    | Precision | 0.26     | 0.005   | 0.25     | 0.27     | 0.26     |
+|         | Recall    | 0.36     | 0.003   | 0.36     | 0.37     | 0.36     |
+|         | F1        | 0.24     | 0.003   | 0.24     | 0.25     | 0.24     |
+|         | Accuracy  | 0.36     | 0.003   | 0.36     | 0.37     | 0.36     |
+|         | Support   | 14,108.4 | 0.490   | 14,108.0 | 14,109.0 | 14,108.0 |
+| Meter   | Precision | 0.26     | 0.005   | 0.25     | 0.27     | 0.26     |
+|         | Recall    | 0.36     | 0.001   | 0.36     | 0.36     | 0.36     |
+|         | F1        | 0.21     | 0.001   | 0.21     | 0.22     | 0.21     |
+|         | Accuracy  | 0.36     | 0.001   | 0.36     | 0.36     | 0.36     |
+|         | Support   | 14,108.4 | 0.490   | 14,108.0 | 14,109.0 | 14,108.0 |
+| Mode    | Precision | 0.27     | 0.043   | 0.24     | 0.36     | 0.25     |
+|         | Recall    | 0.35     | 0.003   | 0.35     | 0.36     | 0.36     |
+|         | F1        | 0.24     | 0.033   | 0.22     | 0.31     | 0.23     |
+|         | Accuracy  | 0.35     | 0.003   | 0.35     | 0.36     | 0.36     |
+|         | Support   | 14,108.4 | 0.490   | 14,108.0 | 14,109.0 | 14,108.0 |
+| Tonic   | Precision | 0.25     | 0.002   | 0.25     | 0.26     | 0.25     |
+|         | Recall    | 0.37     | 0.003   | 0.37     | 0.37     | 0.37     |
+|         | F1        | 0.30     | 0.002   | 0.29     | 0.30     | 0.30     |
+|         | Accuracy  | 0.37     | 0.003   | 0.37     | 0.37     | 0.37     |
+|         | Support   | 14,108.4 | 0.490   | 14,108.0 | 14,109.0 | 14,108.0 |
+
+The F1 score of the classification task is 0.37 using all features combined, which is slightly above the random baseline of 0.33. The F1 scores of this task using the features individually are mostly between 0.3 and 0.21 which is below the baseline. See the results of the binary classification task to predict the correct set order for set size of two below in @tbl-rf2-2.
+
+: Order Classification for Set Size 2 {#tbl-rf2-2}
+
+| Feature | Metric    | Mean | Std Dev | Min  | Max  | Median |
+|---------|-----------|------|---------|------|------|--------|
+| All     | Precision | 0.56 | 0.004   | 0.55 | 0.56 | 0.56   |
+|         | Recall    | 0.56 | 0.004   | 0.55 | 0.56 | 0.56   |
+|         | F1        | 0.56 | 0.004   | 0.55 | 0.56 | 0.56   |
+|         | Accuracy  | 0.56 | 0.004   | 0.55 | 0.56 | 0.56   |
+| Type    | Precision | 0.53 | 0.007   | 0.52 | 0.54 | 0.53   |
+|         | Recall    | 0.52 | 0.003   | 0.52 | 0.53 | 0.53   |
+|         | F1        | 0.51 | 0.018   | 0.48 | 0.53 | 0.52   |
+|         | Accuracy  | 0.52 | 0.003   | 0.52 | 0.53 | 0.53   |
+| Meter   | Precision | 0.51 | 0.002   | 0.51 | 0.52 | 0.51   |
+|         | Recall    | 0.51 | 0.002   | 0.51 | 0.51 | 0.51   |
+|         | F1        | 0.51 | 0.002   | 0.50 | 0.51 | 0.51   |
+|         | Accuracy  | 0.51 | 0.002   | 0.51 | 0.51 | 0.51   |
+| Mode    | Precision | 0.52 | 0.005   | 0.51 | 0.52 | 0.52   |
+|         | Recall    | 0.51 | 0.004   | 0.51 | 0.52 | 0.51   |
+|         | F1        | 0.50 | 0.005   | 0.49 | 0.50 | 0.50   |
+|         | Accuracy  | 0.51 | 0.004   | 0.51 | 0.52 | 0.51   |
+| Tonic   | Precision | 0.53 | 0.006   | 0.52 | 0.54 | 0.53   |
+|         | Recall    | 0.53 | 0.004   | 0.52 | 0.53 | 0.53   |
+|         | F1        | 0.52 | 0.007   | 0.51 | 0.53 | 0.52   |
+|         | Accuracy  | 0.53 | 0.004   | 0.52 | 0.53 | 0.53   |
+
+Again, all F1 scores are at or slightly above baseline. See @tbl-rf2-3 for set size of three.
+
+: Order Classification for Set Size 3 {#tbl-rf2-3}
+
+| Feature | Metric    | Mean | Std Dev | Min  | Max  | Median |
+|---------|-----------|------|---------|------|------|--------|
+| All     | Precision | 0.64 | 0.005   | 0.63 | 0.64 | 0.64   |
+|         | Recall    | 0.64 | 0.005   | 0.63 | 0.64 | 0.64   |
+|         | F1        | 0.63 | 0.005   | 0.63 | 0.64 | 0.64   |
+|         | Accuracy  | 0.64 | 0.005   | 0.63 | 0.64 | 0.64   |
+| Type    | Precision | 0.53 | 0.006   | 0.52 | 0.54 | 0.53   |
+|         | Recall    | 0.53 | 0.003   | 0.52 | 0.53 | 0.52   |
+|         | F1        | 0.51 | 0.023   | 0.47 | 0.53 | 0.52   |
+|         | Accuracy  | 0.53 | 0.003   | 0.52 | 0.53 | 0.52   |
+| Meter   | Precision | 0.52 | 0.012   | 0.51 | 0.54 | 0.52   |
+|         | Recall    | 0.52 | 0.003   | 0.51 | 0.52 | 0.51   |
+|         | F1        | 0.49 | 0.034   | 0.42 | 0.51 | 0.50   |
+|         | Accuracy  | 0.52 | 0.003   | 0.51 | 0.52 | 0.51   |
+| Mode    | Precision | 0.55 | 0.007   | 0.54 | 0.56 | 0.54   |
+|         | Recall    | 0.54 | 0.004   | 0.53 | 0.54 | 0.54   |
+|         | F1        | 0.53 | 0.009   | 0.51 | 0.54 | 0.52   |
+|         | Accuracy  | 0.54 | 0.004   | 0.53 | 0.54 | 0.54   |
+| Tonic   | Precision | 0.57 | 0.002   | 0.57 | 0.57 | 0.57   |
+|         | Recall    | 0.57 | 0.002   | 0.57 | 0.57 | 0.57   |
+|         | F1        | 0.57 | 0.002   | 0.57 | 0.57 | 0.57   |
+|         | Accuracy  | 0.57 | 0.002   | 0.57 | 0.57 | 0.57   |
+
+This condition is, again, close at random baseline with an F1 score of 0.63 using all features. Using features individually, the F1 scores are slightly lower with values between 0.49 and 0.57.
+
+## $k$-means clustering
+To determine the optimal number of clusters, the elbow method was used. See @fig-elbow-plot for an overview of the results.
+
+```{python}
+#| label: fig-elbow-plot
+#| fig-cap: "Elbow plot for determining optimal $k$"
+#| echo: false
+
+import json
+import plotly.graph_objects as go
+
+# Load the data for sets of two and three
+with open('elbow_plot_data_two.json', 'r') as f:
+    plot_data_two = json.load(f)
+
+with open('elbow_plot_data_three.json', 'r') as f:
+    plot_data_three = json.load(f)
+
+# Create the base figure
+fig = go.Figure()
+
+# Add traces for sets of two
+fig.add_trace(
+    go.Scatter(
+        x=list(range(1, plot_data_two['max_clusters'] + 1)),
+        y=plot_data_two['inertias'],
+        mode='lines+markers',
+        name='Inertia (Sets of Two)',
+        hovertemplate='<b>Clusters</b>: %{x}<br>' +
+                      '<b>Inertia</b>: %{y:.2f}<br>' +
+                      '<extra></extra>',
+        visible=True
+    )
+)
+
+# Add traces for sets of three
+fig.add_trace(
+    go.Scatter(
+        x=list(range(1, plot_data_three['max_clusters'] + 1)),
+        y=plot_data_three['inertias'],
+        mode='lines+markers',
+        name='Inertia (Sets of Three)',
+        hovertemplate='<b>Clusters</b>: %{x}<br>' +
+                      '<b>Inertia</b>: %{y:.2f}<br>' +
+                      '<extra></extra>',
+        visible=False
+    )
+)
+
+# Add shapes and annotations for elbow points
+fig.add_shape(type="line",
+    x0=plot_data_two['elbow_point'], y0=0, x1=plot_data_two['elbow_point'], y1=1,
+    yref="paper",
+    line=dict(color="red", width=2, dash="dash"),
+    visible=True
+)
+fig.add_annotation(x=plot_data_two['elbow_point'], y=1, yref="paper",
+    text=f"Elbow point: {plot_data_two['elbow_point']}", showarrow=False,
+    visible=True
+)
+
+fig.add_shape(type="line",
+    x0=plot_data_three['elbow_point'], y0=0, x1=plot_data_three['elbow_point'], y1=1,
+    yref="paper",
+    line=dict(color="red", width=2, dash="dash"),
+    visible=False
+)
+fig.add_annotation(x=plot_data_three['elbow_point'], y=1, yref="paper",
+    text=f"Elbow point: {plot_data_three['elbow_point']}", showarrow=False,
+    visible=False
+)
+
+# Update layout with dropdown menu
+fig.update_layout(
+    updatemenus=[
+        dict(
+            active=0,
+            buttons=list([
+                dict(label="Set Size Two",
+                     method="update",
+                     args=[{"visible": [True, False]},
+                           {"shapes[0].visible": True, "shapes[1].visible": False,
+                            "annotations[0].visible": True, "annotations[1].visible": False,
+                            "xaxis.title": "Number of clusters (k)"}]),
+                dict(label="Set Size Three",
+                     method="update",
+                     args=[{"visible": [False, True]},
+                           {"shapes[0].visible": False, "shapes[1].visible": True,
+                            "annotations[0].visible": False, "annotations[1].visible": True,
+                            "xaxis.title": "Number of clusters (k)"}]),
+            ]),
+            direction="down",
+            pad={"r": 10, "t": 10},
+            showactive=True,
+            x=1,
+            xanchor="right",
+            y=1,
+            yanchor="top"
+        ),
+    ]
+)
+
+# Set axis labels and remove title
+fig.update_layout(
+    xaxis_title="Number of clusters (k)",
+    yaxis_title="Inertia",
+    showlegend=False,
+    hovermode='closest',
+    margin=dict(t=50)
+)
+
+fig.show()
+```
+The optimal number of clusters for the set size two is 21, while the optimal number for sets of three is 21. For an overview of the cluster distribution, see @fig-cluster-distribution.
+```{python}
+#| label: fig-cluster-distribution
+#| fig-cap: "Interactive distribution of cluster sizes"
+#| echo: false
+
+import json
+import plotly.graph_objects as go
+
+# Load the cluster analysis data
+with open('results/cluster_analysis.json', 'r') as f:
+    cluster_data = json.load(f)
+
+def prepare_data(set_size):
+    distribution = cluster_data[f"sets_of_{set_size}"]["analysis"]['cluster_distribution']
+    clusters = sorted([int(k) for k in distribution.keys()])
+    tune_counts = [distribution[str(k)] for k in clusters]
+    return clusters, tune_counts
+
+def create_annotation(tune_counts):
+    total_tunes = sum(tune_counts)
+    avg_tunes_per_cluster = total_tunes / len(tune_counts)
+    max_tunes = max(tune_counts)
+    min_tunes = min(tune_counts)
+    return (f'Total tunes: {total_tunes}<br>'
+            f'Average tunes per cluster: {avg_tunes_per_cluster:.2f}<br>'
+            f'Max tunes in a cluster: {max_tunes}<br>'
+            f'Min tunes in a cluster: {min_tunes}')
+
+# Prepare data for both set sizes
+clusters_two, tune_counts_two = prepare_data('two')
+clusters_three, tune_counts_three = prepare_data('three')
+
+# Create the figure
+fig = go.Figure()
+
+# Add traces for sets of two
+fig.add_trace(go.Bar(
+    x=clusters_two,
+    y=tune_counts_two,
+    name='Sets of Two',
+    text=tune_counts_two,
+    textposition='auto',
+    hovertemplate='Cluster: %{x}<br>Number of tunes: %{y}<extra></extra>',
+    visible=True
+))
+
+# Add traces for sets of three
+fig.add_trace(go.Bar(
+    x=clusters_three,
+    y=tune_counts_three,
+    name='Sets of Three',
+    text=tune_counts_three,
+    textposition='auto',
+    hovertemplate='Cluster: %{x}<br>Number of tunes: %{y}<extra></extra>',
+    visible=False
+))
+
+# Add annotations for both set sizes
+annotation_text_two = create_annotation(tune_counts_two)
+annotation_text_three = create_annotation(tune_counts_three)
+
+# Update layout with dropdown menu and annotations
+fig.update_layout(
+    updatemenus=[
+        dict(
+            active=0,
+            buttons=list([
+                dict(label="Set Size Two",
+                     method="update",
+                     args=[{"visible": [True, False]},
+                           {"xaxis.title": "Cluster",
+                            "annotations[0].text": annotation_text_two}]),
+                dict(label="Set Size Three",
+                     method="update",
+                     args=[{"visible": [False, True]},
+                           {"xaxis.title": "Cluster",
+                            "annotations[0].text": annotation_text_three}]),
+            ]),
+            direction="down",
+            pad={"r": 10, "t": 10},
+            showactive=True,
+            x=1,
+            xanchor="right",
+            y=1,
+            yanchor="top"
+        ),
+    ],
+    xaxis_title="Cluster",
+    yaxis_title="Number of Tunes",
+    showlegend=False,
+    bargap=0.2,
+    hovermode='closest',
+    margin=dict(t=50, r=10, b=50, l=50),
+    annotations=[
+        dict(
+            text=annotation_text_two,
+            x=0.7,
+            y=0.98,
+            xref="paper",
+            yref="paper",
+            showarrow=False,
+            align="right",
+            bordercolor="black",
+            borderwidth=1,
+            borderpad=4,
+            bgcolor="white",
+            opacity=0.8
+        )
+    ]
+)
+
+fig.show()
+```
+In both set sizes, tunes are not evenly distributed among clusters. There were 49,708 tunes in sets of the size of two. Maximal cluster size was 5,896 while minimum cluster size was 218 with average size of about 2367. For the sets of size three, there were 70,542 tunes with a minimal cluster size of 1,381 and a maximal size of 13,748. The average cluster size was about 4149. For an analysis of how much sets ended fully or partially in the same cluster, see @tbl-clustering-results.
+
+: Count of Sets in the same Cluster {#tbl-clustering-results}
+
+| Set Size    | Total Sets | Partial Match   | Full Match     |
+|-------------|------------|-----------------|----------------|
+| Two         | 24,854     | -[^3]           | 8,188 (32.94%) |
+| Three       | 23,514     | 10,950 (46.57%) | 3,769 (16.03%) |
+
+[^3]: Sets of size two can only have full matches and not partial matches.
+
+
+In the case of set size two, about 33% of sets were located inside the same cluster, which is above the baseline of about 7%. With sets of size three, all three tunes ended up in the same cluster in about 16% of cases, which is above baseline of about 10%. Patial matches, which are defined as at least two of three tunes of a three tune set ending up in the same cluster, were about 46% of the cases, which is again above the baseline of 26%. See @tbl-clustering-chi for the results of the Chi-square test on that results.
+
+: Chi-square Results of Set Tunes Matching their Cluster {#tbl-clustering-chi}
+
+| Set Size | Match Type      | Observed | Baseline | Chi-square Statistic | p-value |
+|----------|-----------------|----------|----------|----------------------|---------|
+| Two      | Full Match      | 32.94%   | 7.11%    | 5178.71              | < 0.001 |
+|          | Partial Match   | -        | -        | -                    | -       |
+|          | Full or Partial | -        | -        | -                    | -       |
+| Three    | Full Match      | 16.03%   | 9.63%    | 429.90               | < 0.001 |
+|          | Partial Match   | 46.57%   | 26.11%   | 2126.76              | < 0.001 |
+|          | Full or Partial | 62.60%   | 35.74%   | 3392.68              | < 0.001 |
+
+All match types are highly significant for both set sizes.
+
+# Discussion
+The $k$-means clustering yielded highly significant results in support of $H_1$. Using a Chi-square test it could be shown that tunes of a set end up significantly more often inside the same cluster than outside of it. This provides evidence that Irish folk tunes can be grouped based on their musical properties.
+
+However, the results of the SEM, permuation testing and RF classification can't provide enough evidence in favour of $H_1$ in order to reject $H_0$. Even though all conditions in the permutation testing were highly significant, this can't be directly attributed to musical properties because the dataset couldn't be controlled for other confounds that could influence the selection of tunes into sets like tradition or popularity of sets. The results of the SEM were not significant for any property with p-values of 0.6 and higher which means there is no meaningful conclusion from this method. Similarly, the classification task failed to provide strong evidence for musical properties playsing a role set order or position in a set. Only using all features together to predict the order of sets of the size three yielded results that were not very close to the baseline. This could indicate that order of tunes is more important in sets of this size compared to sets of size two. However, the results are still too weak for any valid conclution.
+
+Reasons for this can be grouped in four categories. First, the RF classification approach was mainly concerned with the order of the tunes inside of a set which might not be that important for the selection of tunes overall. Sets might need tunes of certain properties but without any restriction on position inside the set.
+
+Second, there could be more musical properties, that have a higher influence on tune selection. Possible candidates for other musical features are rhythm, melody and melodic contour, and intervals. These features could be extracted from the ABC notation of the tunes and might be more directly relevant for tune selection because in Irish folk music, melody plays a very important role because musicians play mostly in unison with only a small focus on accompanyment like guitar chords [@fairbairn1994, 567].
+
+The other reason could be that there are other, non-musical features that dictate tune selection. This could either be tradition, which makes certain tunes be played together because people are used to playing or hearing them played together. It could also be possible that the popularity of tunes plays a role in the selection because some tunes might be played very rarely and others in nearly every session.
+
+Another issue could be, that there are regional differences in tune selection for sets. Since the dataset did not distinguish tunes by their region, different regional strategies could be mixed, creating noise when processed together. Similarly, non-Irish tunes in the dataset could also introduce noise, since e.g. tunes from English folk sessions are played significantly slower [@stock2004, 42-43].
 
 # Conclusion
-Very good paper.
+Sets are an integral part of how Irish folk music is played live in sessions. Their fast and continuous nature leads to tunes being played without any breaks or delays. This paper tried to investigate, if the selection of tunes inside a set was dictated by the similarity in musical properties of those tunes. While SEM, permutation testing and RF classification approaches could not find evidence to support the $H_1$, the $k$-means clustering did. Using Chi-square test it was shown that tunes of a common set are grouped together by the $k$-means significantly more often than the baseline distribution would suggest.
+
+Because of that, the null hypothesis $H_0$, that the similarity in musical properties of tunes does not influence their selection into sets, can be savely rejected. However, further research into the nature of these similarity relationships and on why the other approaches failed to achieve similar results is suggested.
+
+# References
+::: {#refs}
+:::
+
+# Appendix {.unnumbered .unlisted}
+## Example of an Irish folk session {#sec-appendix-session}
+{{< video https://www.youtube.com/watch?v=Lh2sxcqkJ6I >}}
+In this video by @session, the banjo player can be heard specifying the next set by calling out the tunes *Drowsy Maggie*, *Cooley's Reel* and *St. Anne's Reel* at 0:19. After initiating the set by starting to play the first tune, the other musicians join in. The transition from the first tune to the second is at 01:06 and the transition from the second to the third tune is at 3:35.
+
+## Prompts used for literature review
+### Humanities papers
+```{.wrap .markdown}
+# IDENTITY and PURPOSE
+You are a humanities research paper analysis expert. You take a research paper as an input and analyse its content, structure, and quality. You assess if and how the content of the paper is related to the users own research.
+
+# USER RESEARCH
+The user writes a term paper in computational musicology about the combination of tunes into sets in Irish folk traditional instrumental music. In Irish folk, tunes are played live in rapid succession without any noticable breaks between them. These tune combinations are called sets. The user has a dataset on Irish folk sets that contains data on type (like Jig, Reel or Hornpipe), meter (like 6/8 or 4/4), mode (like major, dorian or myxolidian), and root note(like D, A or G). The dataset also contains the melodies of the tunes in ABC notation as well as their position inside the set. The user is interested in the structure and characteristics of these sets, how they are formed, and how they relate to each other. The user is looking for papers that analyze the structure and characteristics of tunes and tune sets in Irish folk music, especially their musical properties and common structure. The user wants to use this humanities research from musicology to investigate claims from the humanities papers in a computational approach using statistical and machine learning methods on the aforementioned mentioned dataset.
+
+# STEPS
+- Read and fully understand the entire paper and think deeply about it.
+- Analyse the content and check if it is related to the user's research that was mentioned earlier.
+
+# RULES
+- Generate a summary of the paper and its conclusions into a 25-word sentence called SUMMARY.
+- Summarize the research question of the paper in a 15-word sentence called RESEARCH QUESTION.
+- Describe the methodology used in the paper in a 15-word sentence called METHODOLOGY.
+- In great detail, desribe how the paper is related to the user's research in a section called RELATION TO USER'S RESEARCH.
+- You may structure this section into subsections called TUNE PROPERTIES, SET PROPERTIES, CULTURAL CONTEXT if the paper coveres Irish folk music
+- Otherwise, describe if the insights of the paper could be related to Irish folk tunes and sets using other relevant subsections that you see fit.
+- Generate a section called LIMITATIONS and list factors that might limit how the user could use this paper for their own research.
+- In a section called RECOMMENDATION, recommend if the user should read the paper and what aspects of it are most relevant.
+- In a section called RATING, rate the paper on a scale from 1 to 10 based on how relevant it is to the user's research.
+
+# OUTPUT INSTRUCTIONS
+- Generate a full summary of the paper based on the rules above.
+- Make the text readable in plain text and don't use any special Markdown formatting like bold or cursive.
+- Use Markdown for sections and subsections.
+- Do not output warnings or notes, just the generated text.
+- If the provided paper is empty (for example because issues in OCR), output a message that the paper is empty.
+
+# INPUT:
+PAPER:
+```
+
+### Science papers
+```{.wrap .markdown}
+# IDENTITY and PURPOSE
+You are a science research paper analysis expert. You take a research paper as an input and analyse its content, structure, and quality. You assess if and how the content of the paper is related to the users own research.
+
+# USER RESEARCH
+The user writes a term paper in computational musicology about the combination of tunes into sets in Irish folk traditional instrumental music. In Irish folk, tunes are played live in rapid succession without any noticable breaks between them. These tune combinations are called sets. The user has a dataset on Irish folk sets that contains data on type (like Jig, Reel or Hornpipe), meter (like 6/8 or 4/4), mode (like major, dorian or myxolidian), and root note(like D, A or G). The dataset also contains the melodies of the tunes in ABC notation as well as their position inside the set. The user is interested in the structure and characteristics of these sets, how they are formed, and how they relate to each other. The user is looking for papers that analyze the structure and characteristics of tunes and tune sets in Irish folk music, especially their musical properties and common structure. The user wants to use this research to see which computational methods in musicology have been used successfully in the past and how this could relate to their own computational approach on using statistical and machine learning methods on the aforementioned mentioned dataset.
+
+# STEPS
+- Read and fully understand the entire paper and think deeply about it.
+- Analyse the content and check if it is related to the user's research that was mentioned earlier.
+
+# RULES
+- Generate a summary of the paper and its conclusions into a 25-word sentence called SUMMARY.
+- Summarize the research question of the paper in a 15-word sentence called RESEARCH QUESTION.
+- Describe the methodology used in the paper in a 15-word sentence called METHODOLOGY.
+- In the METHODOLOGY section, use subsections STUDY DESIGN, SAMPLE SIZE, DATA COLLECTION, DATA ANALYSIS, or other relevant subsections that you see fit.
+- In great detail, desribe how the paper is related to the user's research in a section called RELATION TO USER'S RESEARCH.
+- You may structure this section into subsections called TUNE PROPERTIES, SET PROPERTIES, CULTURAL CONTEXT if the paper coveres Irish folk music
+- Otherwise, describe if the insights of the paper could be related to Irish folk tunes and sets using other relevant subsections that you see fit.
+- Generate a section called LIMITATIONS and list factors that might limit how the user could use this paper for their own research.
+- In a section called RECOMMENDATION, recommend if the user should read the paper and what aspects of it are most relevant.
+- In a section called RATING, rate the paper on a scale from 1 to 10 based on how relevant it is to the user's research.
+
+# OUTPUT INSTRUCTIONS
+- Generate a full summary of the paper based on the rules above.
+- Make the text readable in plain text and don't use any special Markdown formatting like bold or cursive.
+- Use Markdown for sections and subsections.
+- Do not output warnings or notes, just the generated text.
+- If the provided paper is empty (for example because issues in OCR), output a message that the paper is empty.
+
+# INPUT:
+PAPER:
+```
+## Prompts used for starting code generation
+### Permutation testing
+```{.wrap .markdown}
+# IDENTITY and PURPOSE
+You are an expert in statistical analysis and computational musicology, specializing in Irish folk music. Your task is to generate code that performs statistical analysis on a dataset of Irish folk music tune sets. The code should implement various statistical tests and permutation testing to analyze the structure and characteristics of these sets.
+
+# USER RESEARCH
+The user writes a term paper in computational musicology about the combination of tunes into sets in Irish folk traditional instrumental music. In Irish folk, tunes are played live in rapid succession without any noticable breaks between them. These tune combinations are called sets. The user has a dataset on Irish folk sets that contains data on type (like Jig, Reel or Hornpipe), meter (like 6/8 or 4/4), mode (like major, dorian or myxolidian), and root note(like D, A or G). The dataset also contains the melodies of the tunes in ABC notation as well as their position inside the set. The user is interested in the structure and characteristics of these sets, how they are formed, and how they relate to each other. The user is looking for papers that analyze the structure and characteristics of tunes and tune sets in Irish folk music, especially their musical properties and common structure. The user wants to use this research to see which computational methods in musicology have been used successfully in the past and how this could relate to their own computational approach on using statistical and machine learning methods on the aforementioned mentioned dataset.
+
+# STEPS
+- Create test statistics for various musical properties (e.g. Shannon entropy, Jaccard similarity, Chi-square test).
+- Implement permutation testing to assess the statistical significance of the observed patterns.
+- Save the results in JSON format.
+
+# RULES
+- Use Python only.
+- Use permutation testing with a large number of resamples (like 10000) and make it a parameter in the functions.
+- Analyze the sets based on individual features (type, meter, mode and tonic) as well as all features combined.
+
+# DATASET STRUCTURE
+Here is a snippet from the dataset for reference:
+```
+### Random forest classifier
+```{.wrap .markdown}
+# IDENTITY and PURPOSE
+You are an expert in machine learning and computational musicology, specializing in Irish folk music. Your task is to generate code that performs Random Forest classification analysis on a dataset of Irish folk music tune sets. The code should implement cross-validation and detailed performance metrics to analyze the structure and characteristics of these sets.
+
+# USER RESEARCH
+The user writes a term paper in computational musicology about the combination of tunes into sets in Irish folk traditional instrumental music. In Irish folk, tunes are played live in rapid succession without any noticable breaks between them. These tune combinations are called sets. The user has a dataset on Irish folk sets that contains data on type (like Jig, Reel or Hornpipe), meter (like 6/8 or 4/4), mode (like major, dorian or myxolidian), and root note(like D, A or G). The dataset also contains the melodies of the tunes in ABC notation as well as their position inside the set. The user is interested in the structure and characteristics of these sets, how they are formed, and how they relate to each other. The user is looking for papers that analyze the structure and characteristics of tunes and tune sets in Irish folk music, especially their musical properties and common structure. The user wants to use this research to see which computational methods in musicology have been used successfully in the past and how this could relate to their own computational approach on using statistical and machine learning methods on the aforementioned mentioned dataset.
+
+# STEPS
+- Implement functions to load and preprocess the dataset.
+- Create a function to split the data based on set size and selected features.
+- Implement a Random Forest classifier with cross-validation.
+- Calculate various performance metrics (accuracy, precision, recall, F1-score).
+- Analyze feature importance.
+- Perform the analysis for different set sizes and feature combinations.
+- Save the results in a structured JSON format.
+
+# RULES
+- Create a Random Forest classifier
+- Implement stratified k-fold cross-validation to ensure robust results.
+- Analyze the sets based on individual features (type, meter, mode, tonic) as well as all possible combinations of features.
+- Calculate and report detailed performance metrics for each fold and overall.
+
+# OUTPUT INSTRUCTIONS
+- Save the results in a JSON file with a clear, hierarchical structure that includes performance metrics and feature importance for each combination of set size and features.
+
+# DATASET STRUCTURE
+Here is a snippet from the dataset for reference:
+```
+
+### K-mean clustering
+```{.wrap .markdown}
+# IDENTITY and PURPOSE
+You are an expert in machine learning and computational musicology, specializing in Irish folk music. Your task is to generate code that performs K-means clustering analysis on a dataset of Irish folk music tune sets. The code should implement the elbow method for determining the optimal number of clusters and provide detailed analysis of the clustering results.
+
+# USER RESEARCH
+The user writes a term paper in computational musicology about the combination of tunes into sets in Irish folk traditional instrumental music. In Irish folk, tunes are played live in rapid succession without any noticable breaks between them. These tune combinations are called sets. The user has a dataset on Irish folk sets that contains data on type (like Jig, Reel or Hornpipe), meter (like 6/8 or 4/4), mode (like major, dorian or myxolidian), and root note(like D, A or G). The dataset also contains the melodies of the tunes in ABC notation as well as their position inside the set. The user is interested in the structure and characteristics of these sets, how they are formed, and how they relate to each other. The user is looking for papers that analyze the structure and characteristics of tunes and tune sets in Irish folk music, especially their musical properties and common structure. The user wants to use this research to see which computational methods in musicology have been used successfully in the past and how this could relate to their own computational approach on using statistical and machine learning methods on the aforementioned mentioned dataset.
+
+# STEPS
+- Implement the elbow method to determine the optimal number of clusters.
+- Perform K-means clustering on sets of two and three tunes separately.
+- Analyze the clustering results, including the percentage of sets where all tunes are in the same cluster.
+- Visualize the elbow plot using plotly.
+- Save the results to a file called 'elbow_plot_data.json'.
+
+# RULES
+- Use the scikit-learn library for K-means clustering.
+- Use plotly for creating interactive visualizations that are usable in quarto.
+- Handle sets of two and three tunes separately in the analysis.
+- Ensure all data structures are serializable for JSON output.
+
+# OUTPUT INSTRUCTIONS
+- Save the clustering analysis results in a JSON file with a clear, hierarchical structure.
+- Generate interactive HTML plots for the elbow method results.
+- Save the elbow plot data in separate JSON files for sets of two and three tunes.
+
+# DATASET STRUCTURE
+Here is a snippet from the dataset for reference:
+```
